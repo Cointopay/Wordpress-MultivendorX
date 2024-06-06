@@ -4,7 +4,7 @@
  * Plugin URI: https://app.cointopay.com/
  * Description: MVX Cointopay Gateway is a payment gateway for woocommerce shopping plateform also compatible with WC Marketplace.
  * Author: Cointopay.com
- * Version: 1.2.8
+ * Version: 1.3.0
  * Author URI: https://cointopay.com/
  *
  * Text Domain: mvx-cointopay-gateway
@@ -29,11 +29,11 @@ if (!defined('MVX_COINTOPAY_GATEWAY_TEXT_DOMAIN')) {
 }
 
 if(!MVX_Cointopay_Gateway_Dependencies::woocommerce_active_check()){
-    add_action('admin_notices', 'woocommerce_inactive_notice');
+    add_action('admin_notices', 'cointopay_mvx_woocommerce_inactive_notice');
 }
 
 if(MVX_Cointopay_Gateway_Dependencies::others_cointopay_plugin_active_check()){
-    add_action('admin_notices', 'others_cointopay_plugin_inactive_notice');
+    add_action('admin_notices', 'others_cointopay_mvx_plugin_inactive_notice');
 }
 
 if (!class_exists('MVX_Cointopay_Gateway') && MVX_Cointopay_Gateway_Dependencies::woocommerce_active_check() && !MVX_Cointopay_Gateway_Dependencies::others_cointopay_plugin_active_check()) {
