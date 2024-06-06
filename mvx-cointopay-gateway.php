@@ -4,46 +4,55 @@
  * Plugin URI: https://app.cointopay.com/
  * Description: MVX Cointopay Gateway is a payment gateway for woocommerce shopping plateform also compatible with WC Marketplace.
  * Author: Cointopay.com
- * Version: 1.2.7
+ * Version: 1.2.8
  * Author URI: https://cointopay.com/
  *
  * Text Domain: mvx-cointopay-gateway
  */
-if (!defined('ABSPATH')) {
-    // Exit if accessed directly
-    exit;
+
+if ( ! defined( 'ABSPATH' ) )
+{
+    exit; // Exit if accessed directly
 }
+
 if (!class_exists('MVX_Cointopay_Gateway_Dependencies')) {
-    require_once 'includes/class-mvx-cointopay-gateway-dependencies.php';
+    require_once 'classes/class-mvx-cointopay-gateway-dependencies.php';
 }
 require_once 'includes/mvx-cointopay-gateway-core-functions.php';
+require_once 'mvx-cointopay-gateway-config.php';
 
+if (!defined('MVX_COINTOPAY_GATEWAY_PLUGIN_TOKEN')) {
+    exit;
+}
+if (!defined('MVX_COINTOPAY_GATEWAY_TEXT_DOMAIN')) {
+    exit;
+}
 
 if(!MVX_Cointopay_Gateway_Dependencies::woocommerce_active_check()){
     add_action('admin_notices', 'woocommerce_inactive_notice');
 }
 
-if (!class_exists('MVX_Cointopay_Gateway') && MVX_Cointopay_Gateway_Dependencies::woocommerce_active_check()) {
-	require_once( dirname(__FILE__) . '/classes/class-mvx-cointopay-gateway.php' );
+if(MVX_Cointopay_Gateway_Dependencies::others_cointopay_plugin_active_check()){
+    add_action('admin_notices', 'others_cointopay_plugin_inactive_notice');
+}
+
+if (!class_exists('MVX_Cointopay_Gateway') && MVX_Cointopay_Gateway_Dependencies::woocommerce_active_check() && !MVX_Cointopay_Gateway_Dependencies::others_cointopay_plugin_active_check()) {
+    require_once( 'classes/class-mvx-cointopay-gateway.php' );
     global $MVX_Cointopay_Gateway;
-	
     $MVX_Cointopay_Gateway = new MVX_Cointopay_Gateway(__FILE__);
     $GLOBALS['MVX_Cointopay_Gateway'] = $MVX_Cointopay_Gateway;
-	function MVX_Cointopay_Gateway_admin_js() {
-		wp_enqueue_script( 'mvx-ctp-custom-js', plugins_url('assets/js/mvx_custom_js.js', __FILE__), array(), '1.0.0', true );
-	}
-	add_action('wp_enqueue_scripts', 'MVX_Cointopay_Gateway_admin_js');
 }
-add_action( 'wp_ajax_nopriv_getMerchantCoinsByAjax', 'getMerchantCoinsByAjax' );
-add_action( 'wp_ajax_getMerchantCoinsByAjax', 'getMerchantCoinsByAjax' );
-function getMerchantCoinsByAjax()
+
+add_action( 'wp_ajax_nopriv_getMerchantCoinsByAjaxMVX', 'getMerchantCoinsByAjaxMVX' );
+add_action( 'wp_ajax_getMerchantCoinsByAjaxMVX', 'getMerchantCoinsByAjaxMVX' );
+function getMerchantCoinsByAjaxMVX()
 {
 	$merchantId = '';
 	$merchantId = sanitize_text_field($_REQUEST['merchant']);
 	if(isset($merchantId) && $merchantId !== '')
 	{
 		$option = '';
-		$arr = getMerchantCoins($merchantId);
+		$arr = getMerchantCoinsMVX($merchantId);
 		foreach($arr as $key => $value)
 		{
 			$option .= '<option value="'.esc_attr($key).'">'.esc_attr($value).'</option>';
@@ -53,7 +62,7 @@ function getMerchantCoinsByAjax()
 	}
 }
 
-function getMerchantCoins($merchantId)
+function getMerchantCoinsMVX($merchantId)
 {
 	$params = array(
 		'body' => 'MerchantID=' . $merchantId . '&output=json',
@@ -84,14 +93,14 @@ function getMerchantCoins($merchantId)
 add_action('woocommerce_after_order_notes', 'cointopay_add_select_checkout_field');
 function cointopay_add_select_checkout_field( $checkout ) {
 	 global $MVX_Cointopay_Gateway;
-	if(get_option('woocommerce_mvx-cointopay-payments_settings') && get_option('woocommerce_mvx-cointopay-payments_settings') !== ''){
-		$cointopay_payments_settings = get_option('woocommerce_mvx-cointopay-payments_settings', true);
+	if(get_option('woocommerce_mvx-cointopay_settings') && get_option('woocommerce_mvx-cointopay_settings') !== ''){
+		$cointopay_payments_settings = get_option('woocommerce_mvx-cointopay_settings', true);
 		
-		if($cointopay_payments_settings['enabled'] === 'yes' && $cointopay_payments_settings['cointopay_merchant_id'] !== ''){
+		if($cointopay_payments_settings['enabled'] === 'yes' && $cointopay_payments_settings['cointopay_mvx_merchant_id'] !== ''){
 			// The user link
-			$cointopay_merchant_id = $cointopay_payments_settings['cointopay_merchant_id'];
+			$cointopay_merchant_id = $cointopay_payments_settings['cointopay_mvx_merchant_id'];
 
-			woocommerce_form_field( 'cointopay_alt_coin', array(
+			woocommerce_form_field( 'cointopay_mvx_alt_coin', array(
 				'type'          => 'select',
 				'class'         => array( 'cointopay_alt_coin' ),
 				'label'         => __( 'Alt Coin for Cointopay MVX' ),
@@ -104,32 +113,32 @@ function cointopay_add_select_checkout_field( $checkout ) {
 		}
 	}
 }
-add_action('woocommerce_checkout_process', 'cointopay_process_custom_payment');
-function cointopay_process_custom_payment(){
-    if($_POST['payment_method'] != 'mvx-cointopay-payments')
+add_action('woocommerce_checkout_process', 'cointopay_mvx_process_custom_payment');
+function cointopay_mvx_process_custom_payment(){
+    if($_POST['payment_method'] != 'mvx-cointopay')
         return;
 
-    if( !isset($_POST['cointopay_alt_coin']) || empty($_POST['cointopay_alt_coin']) )
+    if( !isset($_POST['cointopay_mvx_alt_coin']) || empty($_POST['cointopay_mvx_alt_coin']) )
         wc_add_notice( __( 'Please select valid Alt Coin', $this->domain ), 'error' );
 
 }
 //* Do NOT include the opening php tag shown above. Copy the code shown below.
 //* Update the order meta with field value
- add_action('woocommerce_checkout_update_order_meta', 'cointopay_select_checkout_field_update_order_meta');
- function cointopay_select_checkout_field_update_order_meta( $order_id ) {
-	if (isset($_POST['cointopay_alt_coin'])) update_post_meta( $order_id, 'cointopay_alt_coin', sanitize_text_field($_POST['cointopay_alt_coin']));
+ add_action('woocommerce_checkout_update_order_meta', 'cointopay_mvx_select_checkout_field_update_order_meta');
+ function cointopay_mvx_select_checkout_field_update_order_meta( $order_id ) {
+	if (isset($_POST['cointopay_mvx_alt_coin'])) update_post_meta( $order_id, 'cointopay_mvx_alt_coin', sanitize_text_field($_POST['cointopay_mvx_alt_coin']));
  }
-add_action( 'woocommerce_after_order_notes', 'cointopay_checkout_hidden_field', 10, 1 );
-function cointopay_checkout_hidden_field( $checkout ) {
+add_action( 'woocommerce_after_order_notes', 'cointopay_mvx_checkout_hidden_field', 10, 1 );
+function cointopay_mvx_checkout_hidden_field( $checkout ) {
 	global $MVX_Cointopay_Gateway;
-    if(get_option('woocommerce_mvx-cointopay-payments_settings') && get_option('woocommerce_mvx-cointopay-payments_settings') !== ''){
-		$cointopay_payments_settings = get_option('woocommerce_mvx-cointopay-payments_settings', true);
-		if($cointopay_payments_settings['enabled'] === 'yes' && $cointopay_payments_settings['cointopay_merchant_id'] !== ''){
+    if(get_option('woocommerce_mvx-cointopay_settings') && get_option('woocommerce_mvx-cointopay_settings') !== ''){
+		$cointopay_payments_settings = get_option('woocommerce_mvx-cointopay_settings', true);
+		if($cointopay_payments_settings['enabled'] === 'yes' && $cointopay_payments_settings['merchant_id'] !== ''){
 			// The user link
-			$cointopay_merchant_id = $cointopay_payments_settings['cointopay_merchant_id'];
+			$cointopay_merchant_id = $cointopay_payments_settings['merchant_id'];
 
 			// Output the hidden link
-		   echo '<input type="hidden" class="input-hidden" name="cointopay_merchant_id" id="cointopay_merchant_id" value="' . intval($cointopay_merchant_id) . '" />';
+		   echo '<input type="hidden" class="input-hidden" name="cointopay_mvx_merchant_id" id="cointopay_mvx_merchant_id" value="' . intval($cointopay_merchant_id) . '" />';
 		}
 	}
 }

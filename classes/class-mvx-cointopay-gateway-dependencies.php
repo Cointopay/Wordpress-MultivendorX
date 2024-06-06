@@ -27,5 +27,10 @@ class MVX_Cointopay_Gateway_Dependencies {
         }
         return in_array('dc-woocommerce-multi-vendor/dc_product_vendor.php', self::$active_plugins) || array_key_exists('dc-woocommerce-multi-vendor/dc_product_vendor.php', self::$active_plugins);
     }
-
+    public static function others_cointopay_plugin_active_check() {
+        if (!self::$active_plugins) {
+            self::init();
+        }
+        return in_array('woo-cointopay/woo-cointopay.php', self::$active_plugins) || array_key_exists('woo-cointopay/woo-cointopay.php', self::$active_plugins);
+    }
 }
