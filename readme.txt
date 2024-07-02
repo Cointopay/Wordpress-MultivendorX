@@ -1,6 +1,6 @@
 === MultiVendorX Cointopay Gateway ===
 Contributors: cointopay, therightsw
-Tags: cointopay gateway, multivendorx, wc marketplace, commission, vendor, crypto
+Tags: cointopay gateway, multivendorx, commission, vendor, crypto
 Requires at least: 4.2
 Tested up to: 6.5.4
 Stable tag: 1.3.0
